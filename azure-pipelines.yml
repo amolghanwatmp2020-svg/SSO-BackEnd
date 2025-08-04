@@ -1,0 +1,47 @@
+# azure-pipelines-backend.yml
+trigger:
+- azure-pipelines # or your working branch name
+
+pool:
+  vmImage: 'windows-latest' # Using a Windows agent for a .NET project is a good practice
+
+stages:
+- stage: BuildBackend
+  displayName: 'Build and package .NET Core API'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build .NET Core API'
+    steps:
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore NuGet packages'
+      inputs:
+        command: 'restore'
+        projects: 'SingleSignOn.csproj' # Adjust this path
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Build .NET Core app'
+      inputs:
+        command: 'build'
+        projects: 'SingleSignOn.csproj'
+        arguments: '--configuration Release'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Run tests'
+      inputs:
+        command: 'test'
+        projects: 'SingleSignOn.csproj'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish .NET Core app'
+      inputs:
+        command: 'publish'
+        publishWebProjects: true
+        projects: 'SingleSignOn.csproj'
+        arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish .NET Core Artifact'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'dotnet-drop'
+        publishLocation: 'Container'
