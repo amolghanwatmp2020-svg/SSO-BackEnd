@@ -5,6 +5,9 @@ trigger:
 pool:
   vmImage: 'windows-latest' # Using a Windows agent for a .NET project is a good practice
 
+variables:
+  buildConfiguration: 'Release'
+
 stages:
 - stage: BuildBackend
   displayName: 'Build and package .NET Core API'
@@ -12,6 +15,31 @@ stages:
   - job: BuildJob
     displayName: 'Build .NET Core API'
     steps:
+    - task: NodeTool@0
+      displayName: 'Install Node.js'
+      inputs:
+        versionSpec: '18.x'
+
+    - task: Npm@1
+      displayName: 'Install Angular dependencies'
+      inputs:
+        command: 'install'
+        workingDir: 'frontend/'
+
+    - task: Npm@1
+      displayName: 'Build Angular app'
+      inputs:
+        command: 'custom'
+        customCommand: 'run build -- --configuration=production'
+        workingDir: 'frontend/'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Angular Artifact'
+      inputs:
+        PathtoPublish: 'frontend/dist/your-angular-project-name' # Adjust path
+        ArtifactName: 'angular-drop'
+        publishLocation: 'Container'
+
     - task: DotNetCoreCLI@2
       displayName: 'Restore NuGet packages'
       inputs:
@@ -36,8 +64,6 @@ stages:
       inputs:
         command: 'publish'
         publishWebProjects: true
-        projects: 'SingleSignOn.csproj'
-        arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)'
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish .NET Core Artifact'
