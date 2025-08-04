@@ -1,0 +1,14 @@
+# Visual Studio temporary files
+.vs/
+
+# Binaries for build output
+bin/
+obj/
+
+# NuGet packages
+packages/
+
+# Generated files
+*.suo
+*.user
+*.log
