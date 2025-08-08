@@ -19,55 +19,29 @@ stages:
     displayName: 'Build .NET Core API'
     steps:
 
-    - task: DotNetCoreCLI@2
-      displayName: 'Restore NuGet packages'
-      inputs:
-        command: 'restore'
-        projects: '$(projectFilePath)' # Use the variable
-
-    - task: DotNetCoreCLI@2
-      displayName: 'Build .NET Core app'
-      inputs:
-        command: 'build'
-        projects: '$(projectFilePath)' # Use the variable
-        arguments: '--configuration $(buildConfiguration)'
-
-    # No specific test step for now as it's not the core issue, but keep it if you have tests.
-    - task: DotNetCoreCLI@2
-      displayName: 'Run tests'
-      inputs:
-        command: 'test'
-        projects: '$(projectFilePath)' # Ensure this path is correct if you have a separate test project or use the same one
+    # ... (existing restore, build, test tasks) ...
 
     - task: DotNetCoreCLI@2
       displayName: 'Publish .NET Core app'
       inputs:
         command: 'publish'
-        publishWebProjects: true # Important: Ensures web project structure is considered
-        projects: '$(projectFilePath)' # Use the variable
-        # Ensure the output directory is distinct and well-defined
-        arguments: '--configuration $(buildConfiguration) --output "$(Build.ArtifactStagingDirectory)/AppContent"'
-        # The above line publishes to a subfolder within the staging directory.
-        # This helps in clearly segregating the application's published content.
+        publishWebProjects: true
+        projects: 'SingleSignOn/SingleSignOn.csproj'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
 
-    # ❗ Key Change: Add a step to explicitly copy static files if they are not included by 'publish'
-    # This might be necessary if your Swagger UI files are outside the default publish output
-    # or if they are marked as 'None' instead of 'Content' in your .csproj.
-    # If the 'publish' task correctly includes everything, this step might be redundant but safe.
+    # ❗ ADD THIS TASK to copy the static wwwroot files
     - task: CopyFiles@2
-      displayName: 'Copy Swagger UI (if separate)'
+      displayName: 'Copy wwwroot folder to staging'
       inputs:
-        contents: '**/*swagger*/**' # Adjust this pattern to match your Swagger UI file location
-                                  # e.g., '**/wwwroot/swagger/**' or '**/swagger-ui/**'
-                                  # This assumes Swagger UI files are within your project directory
-        targetFolder: '$(Build.ArtifactStagingDirectory)/AppContent' # Copy to the same folder as published app
-      condition: succeededOrFailed() # Run even if previous tasks fail, just for debugging
+        SourceFolder: '$(Build.SourcesDirectory)/SingleSignOn' # Path to your project's root folder
+        Contents: 'wwwroot/**' # This pattern copies the entire wwwroot folder and its contents
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+      condition: succeeded()
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish .NET Core Artifact'
       inputs:
-        # Publish the content of 'AppContent' directly, so the zip is clean
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)/AppContent'
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
         ArtifactName: 'dotnet-drop'
         publishLocation: 'Container'
 
@@ -76,7 +50,7 @@ stages:
   jobs:
   - deployment: DeployJob
     displayName: 'Deploy API to Azure App Service'
-    environment: 'SSO CICD' # Use your own environment name
+    environment: 'SSO CICD'
     strategy:
       runOnce:
         deploy:
@@ -87,9 +61,5 @@ stages:
               azureSubscription: 'SSOProductionConnection'
               appType: 'webApp'
               appName: 'sso-backend'
-              # The 'package' input should point directly to the artifact name,
-              # as 'PublishBuildArtifacts' handles the zipping.
-              # If 'WEBSITE_RUN_FROM_PACKAGE' is true, Azure will expect a zip.
-              package: '$(Pipeline.Workspace)/dotnet-drop' 
-              # For debugging, you can add this to see verbose logs
-              # deploymentMethod: 'auto'
+              package: '$(Pipeline.Workspace)/dotnet-drop' # Path to your artifact
+              # Note: Azure DevOps will automatically find and use the zip file within this folder
