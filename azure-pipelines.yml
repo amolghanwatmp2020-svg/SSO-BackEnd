@@ -1,65 +1,76 @@
-# azure-pipelines-backend.yml
 trigger:
-- azure-pipelines # or your working branch name
-
-pool:
-  vmImage: 'windows-latest' # Using a Windows agent for a .NET project is a good practice
+  branches:
+    include:
+      - azure-pipelines
 
 variables:
   buildConfiguration: 'Release'
-  # Define the path to your project file relative to the repository root
-  # This makes it easier to manage paths consistently
-  projectFilePath: 'SingleSignOn/SingleSignOn.csproj' 
 
 stages:
-- stage: BuildBackend
-  displayName: 'Build and package .NET Core API'
-  jobs:
-  - job: BuildJob
-    displayName: 'Build .NET Core API'
-    steps:
+  - stage: Build
+    displayName: "Build & Publish .NET Core 8 API"
+    jobs:
+      - job: Build
+        pool:
+          vmImage: 'windows-latest'
 
-    # ... (existing restore, build, test tasks) ...
-
-    - task: DotNetCoreCLI@2
-      displayName: 'Publish .NET Core app'
-      inputs:
-        command: 'publish'
-        publishWebProjects: true
-        projects: 'SingleSignOn/SingleSignOn.csproj'
-        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
-
-    # ❗ ADD THIS TASK to copy the static wwwroot files
-    - task: CopyFiles@2
-      displayName: 'Copy wwwroot folder to staging'
-      inputs:
-        SourceFolder: '$(Build.SourcesDirectory)/SingleSignOn' # Path to your project's root folder
-        Contents: 'wwwroot/**' # This pattern copies the entire wwwroot folder and its contents
-        TargetFolder: '$(Build.ArtifactStagingDirectory)'
-      condition: succeeded()
-
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish .NET Core Artifact'
-      inputs:
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-        ArtifactName: 'dotnet-drop'
-        publishLocation: 'Container'
-
-- stage: DeployBackend
-  displayName: 'Deploy .NET Core API'
-  jobs:
-  - deployment: DeployJob
-    displayName: 'Deploy API to Azure App Service'
-    environment: 'SSO CICD'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: AzureWebApp@1
-            displayName: 'Deploy to Azure App Service'
+        steps:
+          # Install .NET 8 SDK
+          - task: UseDotNet@2
             inputs:
-              azureSubscription: 'SSOProductionConnection'
-              appType: 'webApp'
-              appName: 'sso-backend'
-              package: '$(Pipeline.Workspace)/dotnet-drop' # Path to your artifact
-              # Note: Azure DevOps will automatically find and use the zip file within this folder
+              packageType: 'sdk'
+              version: '8.x'
+
+          # Restore dependencies
+          - task: DotNetCoreCLI@2
+            inputs:
+              command: 'restore'
+              projects: '**/*.csproj'
+
+          # Build project
+          - task: DotNetCoreCLI@2
+            inputs:
+              command: 'build'
+              arguments: '--configuration $(buildConfiguration)'
+              projects: '**/*.csproj'
+
+          # Publish to folder
+          - task: DotNetCoreCLI@2
+            inputs:
+              command: 'publish'
+              publishWebProjects: true
+              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+              zipAfterPublish: true
+
+          # Save artifact for deployment
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'drop'
+              publishLocation: 'Container'
+
+  - stage: Deploy
+    displayName: "Deploy to Azure App Service"
+    dependsOn: Build
+    jobs:
+      - deployment: DeployWebAPI
+        environment: 'production'
+        pool:
+          vmImage: 'windows-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadBuildArtifacts@0
+                  inputs:
+                    buildType: 'current'
+                    downloadType: 'single'
+                    artifactName: 'drop'
+                    downloadPath: '$(System.ArtifactsDirectory)'
+
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: 'SSOProductionConnection'
+                    appType: 'webApp'
+                    appName: 'sso-backend'
+                    package: '$(System.ArtifactsDirectory)/drop/**/*.zip'
