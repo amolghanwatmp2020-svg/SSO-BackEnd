@@ -15,31 +15,33 @@ stages:
   - job: BuildJob
     displayName: 'Build .NET Core API'
     steps:
-  
+
     - task: DotNetCoreCLI@2
       displayName: 'Restore NuGet packages'
       inputs:
         command: 'restore'
-        projects: 'SingleSignOn.csproj' # Adjust this path
+        projects: 'SingleSignOn.csproj' # Corrected path
 
     - task: DotNetCoreCLI@2
       displayName: 'Build .NET Core app'
       inputs:
         command: 'build'
-        projects: 'SingleSignOn.csproj'
-        arguments: '--configuration Release'
+        projects: 'SingleSignOn.csproj' # Corrected path
+        arguments: '--configuration $(buildConfiguration)'
 
     - task: DotNetCoreCLI@2
       displayName: 'Run tests'
       inputs:
         command: 'test'
-        projects: 'SingleSignOn.csproj'
+        projects: 'SingleSignOn.csproj' # Corrected path
 
     - task: DotNetCoreCLI@2
       displayName: 'Publish .NET Core app'
       inputs:
         command: 'publish'
         publishWebProjects: true
+        projects: 'SingleSignOn.csproj' # ⭐ Added this back for consistency and reliability
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)' # Added arguments back
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish .NET Core Artifact'
