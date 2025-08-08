@@ -14,7 +14,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins,
                       policy =>
                       {
-                          policy.AllowAnyOrigin() // Your production frontend URL
+                          policy.WithOrigins("https://sso-fronend-dxa2eccwgjhza2g8.indonesiacentral-01.azurewebsites.net")
                                 .AllowAnyHeader()
                                 .AllowAnyMethod(); 
                       });
