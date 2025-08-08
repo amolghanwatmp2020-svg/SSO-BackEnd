@@ -15,13 +15,7 @@ stages:
   - job: BuildJob
     displayName: 'Build .NET Core API'
     steps:
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Angular Artifact'
-      inputs:
-        PathtoPublish: 'frontend/dist/your-angular-project-name' # Adjust path
-        ArtifactName: 'angular-drop'
-        publishLocation: 'Container'
-
+  
     - task: DotNetCoreCLI@2
       displayName: 'Restore NuGet packages'
       inputs:
