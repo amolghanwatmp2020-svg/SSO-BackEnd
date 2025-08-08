@@ -7,6 +7,9 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
+  # Define the path to your project file relative to the repository root
+  # This makes it easier to manage paths consistently
+  projectFilePath: 'SingleSignOn/SingleSignOn.csproj' 
 
 stages:
 - stage: BuildBackend
@@ -20,33 +23,51 @@ stages:
       displayName: 'Restore NuGet packages'
       inputs:
         command: 'restore'
-        projects: 'SingleSignOn/SingleSignOn.csproj' # Corrected path
+        projects: '$(projectFilePath)' # Use the variable
 
     - task: DotNetCoreCLI@2
       displayName: 'Build .NET Core app'
       inputs:
         command: 'build'
-        projects: 'SingleSignOn/SingleSignOn.csproj' # Corrected path
+        projects: '$(projectFilePath)' # Use the variable
         arguments: '--configuration $(buildConfiguration)'
 
+    # No specific test step for now as it's not the core issue, but keep it if you have tests.
     - task: DotNetCoreCLI@2
       displayName: 'Run tests'
       inputs:
         command: 'test'
-        projects: 'SingleSignOn.csproj' # Corrected path
+        projects: '$(projectFilePath)' # Ensure this path is correct if you have a separate test project or use the same one
 
     - task: DotNetCoreCLI@2
       displayName: 'Publish .NET Core app'
       inputs:
         command: 'publish'
-        publishWebProjects: true
-        projects: 'SingleSignOn/SingleSignOn.csproj' # ⭐ Added this back for consistency and reliability
-        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)' # Added arguments back
+        publishWebProjects: true # Important: Ensures web project structure is considered
+        projects: '$(projectFilePath)' # Use the variable
+        # Ensure the output directory is distinct and well-defined
+        arguments: '--configuration $(buildConfiguration) --output "$(Build.ArtifactStagingDirectory)/AppContent"'
+        # The above line publishes to a subfolder within the staging directory.
+        # This helps in clearly segregating the application's published content.
+
+    # ❗ Key Change: Add a step to explicitly copy static files if they are not included by 'publish'
+    # This might be necessary if your Swagger UI files are outside the default publish output
+    # or if they are marked as 'None' instead of 'Content' in your .csproj.
+    # If the 'publish' task correctly includes everything, this step might be redundant but safe.
+    - task: CopyFiles@2
+      displayName: 'Copy Swagger UI (if separate)'
+      inputs:
+        contents: '**/*swagger*/**' # Adjust this pattern to match your Swagger UI file location
+                                  # e.g., '**/wwwroot/swagger/**' or '**/swagger-ui/**'
+                                  # This assumes Swagger UI files are within your project directory
+        targetFolder: '$(Build.ArtifactStagingDirectory)/AppContent' # Copy to the same folder as published app
+      condition: succeededOrFailed() # Run even if previous tasks fail, just for debugging
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish .NET Core Artifact'
       inputs:
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        # Publish the content of 'AppContent' directly, so the zip is clean
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/AppContent'
         ArtifactName: 'dotnet-drop'
         publishLocation: 'Container'
 
@@ -66,4 +87,9 @@ stages:
               azureSubscription: 'SSOProductionConnection'
               appType: 'webApp'
               appName: 'sso-backend'
-              package: '$(Pipeline.Workspace)/dotnet-drop' # Path to your artifact
+              # The 'package' input should point directly to the artifact name,
+              # as 'PublishBuildArtifacts' handles the zipping.
+              # If 'WEBSITE_RUN_FROM_PACKAGE' is true, Azure will expect a zip.
+              package: '$(Pipeline.Workspace)/dotnet-drop' 
+              # For debugging, you can add this to see verbose logs
+              # deploymentMethod: 'auto'
