@@ -14,7 +14,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins,
                       policy =>
                       {
-                          policy.AllowAnyOrigin() // Your production frontend URL
+                          policy.WithOrigins("https://sso-fronend-dxa2eccwgjhza2g8.indonesiacentral-01.azurewebsites.net")
                                 .AllowAnyHeader()
                                 .AllowAnyMethod(); 
                       });
@@ -39,11 +39,8 @@ builder.Services.AddAuthorization(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 // 1. Routing must come first to identify the endpoint.
