@@ -54,7 +54,7 @@ stages:
     dependsOn: Build
     jobs:
       - deployment: DeployWebAPI
-        environment: 'production'
+        environment: 'SSO CICD'
         pool:
           vmImage: 'windows-latest'
         strategy:
