@@ -18,7 +18,7 @@ namespace Server.Controllers
         [HttpGet("public")]
         public IActionResult GetPublicData()
         {
-            return Ok("This is public data, accessible by anyone.");
+            return Ok("This is public data, accessible by anyone test CICD.");
         }
 
         [HttpGet("authenticated")]
