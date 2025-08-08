@@ -55,7 +55,7 @@ stages:
   jobs:
   - deployment: DeployJob
     displayName: 'Deploy API to Azure App Service'
-    environment: 'your-environment-name' # Use your own environment name
+    environment: 'SSO CICD' # Use your own environment name
     strategy:
       runOnce:
         deploy:
