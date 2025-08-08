@@ -20,13 +20,13 @@ stages:
       displayName: 'Restore NuGet packages'
       inputs:
         command: 'restore'
-        projects: 'SingleSignOn.csproj' # Corrected path
+        projects: 'SingleSignOn/SingleSignOn.csproj' # Corrected path
 
     - task: DotNetCoreCLI@2
       displayName: 'Build .NET Core app'
       inputs:
         command: 'build'
-        projects: 'SingleSignOn.csproj' # Corrected path
+        projects: 'SingleSignOn/SingleSignOn.csproj' # Corrected path
         arguments: '--configuration $(buildConfiguration)'
 
     - task: DotNetCoreCLI@2
@@ -40,7 +40,7 @@ stages:
       inputs:
         command: 'publish'
         publishWebProjects: true
-        projects: 'SingleSignOn.csproj' # ⭐ Added this back for consistency and reliability
+        projects: 'SingleSignOn/SingleSignOn.csproj' # ⭐ Added this back for consistency and reliability
         arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)' # Added arguments back
 
     - task: PublishBuildArtifacts@1
