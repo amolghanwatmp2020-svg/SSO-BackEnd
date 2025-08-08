@@ -15,24 +15,6 @@ stages:
   - job: BuildJob
     displayName: 'Build .NET Core API'
     steps:
-    - task: NodeTool@0
-      displayName: 'Install Node.js'
-      inputs:
-        versionSpec: '18.x'
-
-    - task: Npm@1
-      displayName: 'Install Angular dependencies'
-      inputs:
-        command: 'install'
-        workingDir: 'frontend/'
-
-    - task: Npm@1
-      displayName: 'Build Angular app'
-      inputs:
-        command: 'custom'
-        customCommand: 'run build -- --configuration=production'
-        workingDir: 'frontend/'
-
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Angular Artifact'
       inputs:
