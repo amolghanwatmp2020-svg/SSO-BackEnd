@@ -49,3 +49,21 @@ stages:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)'
         ArtifactName: 'dotnet-drop'
         publishLocation: 'Container'
+
+- stage: DeployBackend
+  displayName: 'Deploy .NET Core API'
+  jobs:
+  - deployment: DeployJob
+    displayName: 'Deploy API to Azure App Service'
+    environment: 'your-environment-name' # Use your own environment name
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Azure App Service'
+            inputs:
+              azureSubscription: 'SSOProductionConnection'
+              appType: 'webApp'
+              appName: 'sso-backend'
+              package: '$(Pipeline.Workspace)/dotnet-drop' # Path to your artifact
